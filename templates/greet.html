@@ -1,36 +1,184 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset='utf-8' />
-    <title>Points on a map</title>
-    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
-    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.js'></script>
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css' rel='stylesheet' />
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-      }
+<head>
+	<title> My maps </title>
+<script src='https://api.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v0.46.0/mapbox-gl.css' rel='stylesheet' />
+  <script src='https://unpkg.com/@turf/turf/turf.min.js'></script>
+	<style>
+		.container {
+			max-width: 70%;
+			max-height: 50%;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		.inputBox {
+		    width: 50%;
+		    padding: 12px 20px;
+		    margin: 8px 0;
+		    box-sizing: border-box;
+		}
+		.button {
+		    background-color: #4CAF50;
+		    border: none;
+		    color: white;
+		    padding: 15px 32px;
+		    text-align: center;
+		    text-decoration: none;
+		    display: inline-block;
+		    font-size: 16px;
+		    margin: 4px 2px;
+		    cursor: pointer;
+		}
+	</style>
+</head>
 
-      #map {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 100%;
-      }
-    </style>
-  </head>
-  <body>
-    <div id='map'></div>
-    <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoibWFkaGF2cGNtIiwiYSI6ImNrajVqcGZ3MTYxYmozMnFqa3ZwYjQyOTcifQ.kYiYDhvTs1VOeSHWvliCAg'; // replace this with your access token
-    var map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/madhavpcm/ckj5q6etkdqpz19szjk4f22t3', // replace this with your style URL
-      center: [76,9.9],
-      zoom: 10.7
-    });
-    // code from the next step will go here
-    </script>
-  </body>
-</html>
+<body>
+	<div class="container">
+		
+		<font face="verdana" size='7'> Available vaccine centers</font> <br/><br/>
+
+		<input type="hidden" id="longitude" value ={{longitude|safe}}>
+    <input type="hidden" id="latitude" value ={{latitude|safe}}>
+    
+		<div id='map' style='width: 95%; height:500px;'></div><br/><br/>
+		
+	  </div>
+	
+
+
+
+	<script>
+    var longitude, latitude;
+    var LNG = [ 76.261, 76.262 , 76.263, 76.264];//this could be a database from the backend provided by the govt 
+    var LAT = [ 9.931 , 9.934 , 9.932 , 9.930];// based on multiple parameters like distance, availability, crowd etc.
+	var MIN_INDEX=-1;var MIN_DISTANCE = 100000000;
+	longitude = document.getElementById("longitude").value;
+	latitude = document.getElementById("latitude").value;
+	function getLonLat(){
+
+		display_map();
+	}
+	for(var i =0 ; i < 4 ; i++){
+			var from = turf.point([LNG[i] , LAT[i]]);
+			var to = turf.point([longitude, latitude]);
+			var options = {unit : 'kilometers'};
+		
+			var distance = turf.distance(from , to , options);
+
+			if (distance < MIN_DISTANCE){
+				MIN_DISTANCE = distance;
+				MIN_INDEX = i;
+			}
+		}
+
+	function display_map() {
+		mapboxgl.accessToken = "{{ mapbox_access_token }}"
+		var map = new mapboxgl.Map({
+			container: 'map',
+			style: 'mapbox://styles/mapbox/streets-v10',
+			center: [longitude,latitude],
+			zoom: 16,
+			bearing: -17.6,
+			pitch:45
+		});
+		var Marker = new mapboxgl.Marker({
+			draggable: true,
+			color: "#000000",
+		})
+			.setLngLat([longitude, latitude])
+			.addTo(map); 
+		console.log(longitude);console.log(latitude);
+
+		for (var i =0 ; i< 4 ; i++){
+			if (i == MIN_INDEX){
+				var marker = new mapboxgl.Marker({color: "#c95919"})
+					.setLngLat([LNG[i],LAT[i]])
+					.addTo(map);
+			}
+			else{    
+				var marker = new mapboxgl.Marker()
+					.setLngLat([LNG[i],LAT[i]])
+					.addTo(map);
+			}
+		}
+		
+		Marker.on('dragend', function(e){
+    		latitude = Marker._lngLat.lat;
+			longitude = Marker._lngLat.lng;
+			console.log(longitude);console.log(latitude);
+			MIN_DISTANCE = 10000000;
+			for(var i =0 ; i < 4 ; i++){
+			var from = turf.point([LNG[i] , LAT[i]]);
+			var to = turf.point([longitude, latitude]);
+			var options = {unit : 'kilometers'};
+		
+			var distance = turf.distance(from , to , options);
+
+			if (distance < MIN_DISTANCE){
+				MIN_DISTANCE = distance;
+				MIN_INDEX = i;
+			}
+		}
+
+			display_map();
+		});
+			// fulscreen button 
+		map.addControl(new mapboxgl.FullscreenControl());
+
+    	  // display a blue marker
+ 		// Navigation marker at top-left corner
+		var nav = new mapboxgl.NavigationControl();
+		map.addControl(nav, 'top-left');
+		// change false to true, to get your location. Then, enable location in the browser.
+		map.addControl(new mapboxgl.GeolocateControl({
+				positionOptions: {
+					enableHighAccuracy: false
+				},
+			trackUserLocation: false
+		}));
+			// The 'building' layer in the mapbox-streets vector source contains building-height
+			// data from OpenStreetMap.
+		map.on('load', function() {
+			// Insert the layer beneath any symbol layer.
+			var layers = map.getStyle().layers;
+			var labelLayerId;
+			for (var i = 0; i < layers.length; i++) {
+				if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
+					labelLayerId = layers[i].id;
+					break;
+				}
+			}
+			map.addLayer({
+				'id': '3d-buildings',
+				'source': 'composite',
+				'source-layer': 'building',
+				'filter': ['==', 'extrude', 'true'],
+				'type': 'fill-extrusion',
+				'minzoom': 15,
+				'paint': {
+					'fill-extrusion-color': '#aaa',
+					// use an 'interpolate' expression to add a smooth transition effect to the
+					// buildings as the user zooms in
+					'fill-extrusion-height': [
+						"interpolate", ["linear"], ["zoom"],
+						15, 0,
+						15.05, ["get", "height"]
+					],
+					'fill-extrusion-base': [
+						"interpolate", ["linear"], ["zoom"],
+						15, 0,
+						15.05, ["get", "min_height"]
+					],
+					'fill-extrusion-opacity': .6
+				}
+			}, labelLayerId);
+	});
+	}
+    getLonLat();
+		//display_map();
+	
+	</script>
+
+</body>
+</html>	
