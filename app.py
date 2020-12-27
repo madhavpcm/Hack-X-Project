@@ -6,9 +6,9 @@ from flask import request, url_for, render_template, redirect
 
 app = flask.Flask(__name__)
 
-mapbox_access_token = 'pk.eyJ1IjoibWFkaGF2cGNtIiwiYSI6ImNrajVqcGZ3MTYxYmozMnFqa3ZwYjQyOTcifQ.kYiYDhvTs1VOeSHWvliCAg' #mapbox api
+mapbox_access_token = '' #mapbox api
 URL = "https://geocode.search.hereapi.com/v1/geocode"
-api_key = '3oCmlgIcmiyNN3Mtpxl4gpo2HxzHASIhNZYe1A-sqVU' #hereapi
+api_key = '' #hereapi
 
 @app.route('/',methods=['GET','POST'])
 def my_maps():
